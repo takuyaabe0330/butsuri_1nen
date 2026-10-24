@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中学物理 5択クイズ</title>
+  <style>
+    :root {
+      --primary-color: #2196F3; /* 物理分野に合わせて爽やかなブルー基調に変更 */
+      --hover-color: #1976D2;
+      --bg-color: #f4f7f6;
+      --text-color: #333;
+      --card-bg: #fff;
+    }
+    body {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    #app {
+      background: var(--card-bg);
+      width: 100%;
+      max-width: 600px;
+      margin: 20px;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      box-sizing: border-box;
+    }
+    h1, h2 { text-align: center; }
+    .hidden { display: none !important; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      margin: 10px 0;
+      background-color: var(--card-bg);
+      border: 2px solid var(--primary-color);
+      color: var(--primary-color);
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s ease;
+    }
+    .btn:hover { background-color: var(--primary-color); color: #fff; }
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: #fff;
+      text-align: center;
+      font-weight: bold;
+      border: none;
+    }
+    .btn-primary:hover { background-color: var(--hover-color); }
+    .btn:disabled { cursor: not-allowed; opacity: 0.7; }
+    .correct-btn { background-color: #4CAF50 !important; color: white !important; border-color: #4CAF50 !important; }
+    .wrong-btn { background-color: #f44336 !important; color: white !important; border-color: #f44336 !important; }
+    #progress { text-align: center; font-weight: bold; margin-bottom: 20px; color: #666; }
+    #question-text { font-size: 18px; line-height: 1.6; margin-bottom: 25px; }
+    #explanation-box {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #e3f2fd;
+      border-left: 5px solid var(--primary-color);
+      border-radius: 4px;
+    }
+    .score-display { font-size: 24px; text-align: center; margin: 20px 0; font-weight: bold; }
+    .high-score { text-align: center; font-size: 14px; color: #777; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="start-screen">
+      <h1>中学物理 5択クイズ</h1>
+      <p style="text-align: center;" id="start-description">全60問の中からランダムに10問出題されます</p>
+      <div class="high-score" id="high-score-display">過去の最高得点: -- 点</div>
+      <button class="btn btn-primary" onclick="startQuiz()" style="margin-top: 30px;">クイズを始める</button>
+    </div>
+
+    <div id="quiz-screen" class="hidden">
+      <div id="progress">問題 1 / 10</div>
+      <div id="question-text"></div>
+      <div id="options-container"></div>
+
+      <div id="explanation-box" class="hidden">
+        <h3 id="result-title" style="margin-top: 0;"></h3>
+        <p id="explanation-text"></p>
+        <button class="btn btn-primary" onclick="nextQuestion()" style="margin-top: 15px;">次の問題へ</button>
+      </div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+      <h1>結果発表</h1>
+      <div class="score-display" id="final-score"></div>
+      <div class="high-score" id="new-high-score-msg" class="hidden" style="color: #d32f2f; font-weight: bold;"></div>
+      <button class="btn btn-primary" onclick="resetQuiz()" style="margin-top: 30px;">トップに戻る</button>
+    </div>
+  </div>
+
+  <script>
+    const allQuizData = [
+  {
+    "question": "光がまっすぐに進む性質を何というか。",
+    "options": [
+      "直進",
+      "屈折",
+      "反射",
+      "分散",
+      "全反射"
+    ],
+    "answerIndex": 0,
+    "explanation": "光はさえぎるものがない限り、まっすぐに進む性質を持っており、これを光の直進といいます。",
+    "id": 1,
+    "unit": "光の性質"
+  },
+  {
+    "question": "光が鏡の面に当たってはね返るとき、入射角と反射角の関係はどうなるか。",
+    "options": [
+      "入射角 ＞ 反射角",
+      "入射角 ＜ 反射角",
+      "入射角 ＝ 反射角",
+      "入射角 ＋ 反射角 ＝ 90度",
+      "関係はない"
+    ],
+    "answerIndex": 2,
+    "explanation": "光が反射するとき、入射角と反射角は常に等しくなります。これを反射の法則といいます。",
+    "id": 2,
+    "unit": "光の性質"
+  },
+  {
+    "question": "光が空気中から水中に進むとき、入射角と屈折角の大きさの関係はどうなるか。",
+    "options": [
+      "入射角 ＝ 屈折角",
+      "入射角 ＞ 屈折角",
+      "入射角 ＜ 屈折角",
+      "屈折角が常に90度になる",
+      "光は直進する"
+    ],
+    "answerIndex": 1,
+    "explanation": "空気から水やガラスへ光が進むときは、境界線で折れ曲がり、入射角よりも屈折角の方が小さくなります。",
+    "id": 3,
+    "unit": "光の性質"
+  },
+  {
+    "question": "光が水中から空気中へ進むとき、入射角を大きくしていくと光が空気中に出なくなる現象を何というか。",
+    "options": [
+      "乱反射",
+      "分散",
+      "全反射",
+      "正反射",
+      "屈折"
+    ],
+    "answerIndex": 2,
+    "explanation": "水中やガラスから空気中へ進むとき、入射角が一定以上になると、すべての光が反射する全反射が起こります。",
+    "id": 4,
+    "unit": "光の性質"
+  },
+  {
+    "question": "凸レンズの軸に平行な光を当てたとき、光が集まる点を何というか。",
+    "options": [
+      "中心",
+      "頂点",
+      "焦点",
+      "像",
+      "光源"
+    ],
+    "answerIndex": 2,
+    "explanation": "凸レンズには、平行な光を集める性質があり、その光が集まる一点を焦点と呼びます。",
+    "id": 5,
+    "unit": "光の性質"
+  },
+  {
+    "question": "凸レンズの中心から焦点までの距離を何というか。",
+    "options": [
+      "レンズ幅",
+      "焦点距離",
+      "中心距離",
+      "屈折率",
+      "像の距離"
+    ],
+    "answerIndex": 1,
+    "explanation": "凸レンズの中心から焦点までの距離を焦点距離といい、レンズの厚さによって決まっています。",
+    "id": 6,
+    "unit": "光の性質"
+  },
+  {
+    "question": "物体を凸レンズの焦点距離の2倍の位置に置いたとき、像の大きさはどうなるか。",
+    "options": [
+      "物体より大きい",
+      "物体より小さい",
+      "物体と同じ大きさ",
+      "像はできない",
+      "点になる"
+    ],
+    "answerIndex": 2,
+    "explanation": "物体を焦点距離の2倍の位置に置くと、反対側の焦点距離の2倍の位置に、物体と同じ大きさの実像ができます。",
+    "id": 7,
+    "unit": "光の性質"
+  },
+  {
+    "question": "スクリーンに映すことができる、上下左右が逆向きの像を何というか。",
+    "options": [
+      "虚像",
+      "実像",
+      "鏡像",
+      "逆像",
+      "正立像"
+    ],
+    "answerIndex": 1,
+    "explanation": "凸レンズを通り実際に光が集まってできる、上下左右が逆の像を実像といいます。",
+    "id": 8,
+    "unit": "光の性質"
+  },
+  {
+    "question": "物体を凸レンズの焦点より内側（レンズ寄り）に置いたとき、レンズ越しに見える像を何というか。",
+    "options": [
+      "実像",
+      "虚像",
+      "実大像",
+      "倒立像",
+      "反射像"
+    ],
+    "answerIndex": 1,
+    "explanation": "物体が焦点の内側にあるとき、スクリーンには映りませんが、レンズをのぞくと正立で大きな虚像が見えます。",
+    "id": 9,
+    "unit": "光の性質"
+  },
+  {
+    "question": "虚像の向きと大きさについて正しいものはどれか。",
+    "options": [
+      "上下左右が逆で、大きい",
+      "上下左右が同じで、小さい",
+      "上下左右が逆で、小さい",
+      "上下左右が同じで、大きい",
+      "上下左右が同じで、同じ大きさ"
+    ],
+    "answerIndex": 3,
+    "explanation": "虚像は、実物と同じ向き（正立）で、実物よりも大きな像として見えます。",
+    "id": 10,
+    "unit": "光の性質"
+  },
+  {
+    "question": "凸レンズで、物体を焦点の上に置いたとき、像はどうなるか。",
+    "options": [
+      "実像ができる",
+      "虚像ができる",
+      "像はできない",
+      "非常に大きな実像ができる",
+      "点として映る"
+    ],
+    "answerIndex": 2,
+    "explanation": "物体を焦点の上に置くと、レンズを通った光が平行になり集まらないため、像はどこにもできません。",
+    "id": 11,
+    "unit": "光の性質"
+  },
+  {
+    "question": "凸レンズの実験で、物体を焦点距離の2倍より遠くに置いたとき、できる実像の大きさはどうなるか。",
+    "options": [
+      "実物より大きい",
+      "実物より小さい",
+      "実物と同じ",
+      "像はできない",
+      "虚像になる"
+    ],
+    "answerIndex": 1,
+    "explanation": "物体を焦点距離の2倍より遠くに置くと、実物よりも小さな実像が焦点と2倍の点との間にできます。",
+    "id": 12,
+    "unit": "光の性質"
+  },
+  {
+    "question": "凸レンズの実験で、実像が見えているときにレンズの下半分を黒い紙で隠すと、像はどうなるか。",
+    "options": [
+      "下半分が消える",
+      "上半分が消える",
+      "全体が暗くなるが形は残る",
+      "像が全く見えなくなる",
+      "像の向きが逆転する"
+    ],
+    "answerIndex": 2,
+    "explanation": "レンズの一部を隠しても光は残りの部分を通って集まるため、全体像は見えますが、光の量が減り暗くなります。",
+    "id": 13,
+    "unit": "光の性質"
+  },
+  {
+    "question": "身のまわりの物体が、どの方向からも見えるのは、光が表面でどのような反射をしているからか。",
+    "options": [
+      "正反射",
+      "全反射",
+      "乱反射",
+      "屈折",
+      "直進"
+    ],
+    "answerIndex": 2,
+    "explanation": "物体の表面にある凹凸によって、光がいろいろな方向に跳ね返ることを乱反射といいます。",
+    "id": 14,
+    "unit": "光の性質"
+  },
+  {
+    "question": "水の中にある魚が、実際よりも浅いところにいるように見えるのはなぜか。",
+    "options": [
+      "光の反射のため",
+      "光の全反射のため",
+      "光の直進のため",
+      "光の屈折のため",
+      "光の分散のため"
+    ],
+    "answerIndex": 3,
+    "explanation": "水中から出た光が空気との境界線で屈折し、目に届くため、実際よりも浅い位置に像があるように見えます。",
+    "id": 15,
+    "unit": "光の性質"
+  },
+  {
+    "question": "鏡にうつる像について、正しい説明はどれか。",
+    "options": [
+      "実像である",
+      "鏡の表面にできる",
+      "左右が逆の虚像である",
+      "上下左右が逆の実像である",
+      "実物より必ず小さい"
+    ],
+    "answerIndex": 2,
+    "explanation": "鏡にうつる像は、鏡の奥に等距離にあるように見える虚像で、左右が逆（面対称）に見えます。",
+    "id": 16,
+    "unit": "光の性質"
+  },
+  {
+    "question": "光がガラスから空気中へ進むとき、入射角を大きくしていくと、ある角度で屈折角が90度になる。このときの入射角を何というか。",
+    "options": [
+      "反射角",
+      "限界角",
+      "臨界角",
+      "最大角",
+      "全反射角"
+    ],
+    "answerIndex": 2,
+    "explanation": "屈折角が90度になるときの入射角を臨界角と呼び、これより大きな角度では全反射が起こります。",
+    "id": 17,
+    "unit": "光の性質"
+  },
+  {
+    "question": "光のように、自ら光を出す物体を何というか。",
+    "options": [
+      "反射体",
+      "透明体",
+      "光源",
+      "受光体",
+      "レンズ"
+    ],
+    "answerIndex": 2,
+    "explanation": "太陽や電球のように、自分自身で光を出す物体を光源といいます。",
+    "id": 18,
+    "unit": "光の性質"
+  },
+  {
+    "question": "凸レンズの実験で、物体を焦点に近づけていくと（焦点の外側で）、実像の大きさと距離はどう変化するか。",
+    "options": [
+      "小さくなり、レンズに近づく",
+      "大きくなり、レンズに近づく",
+      "小さくなり、レンズから遠ざかる",
+      "大きくなり、レンズから遠ざかる",
+      "大きさも距離も変わらない"
+    ],
+    "answerIndex": 3,
+    "explanation": "物体を焦点に近づけるほど、できる実像は大きく、かつレンズから遠い位置に移動します。",
+    "id": 19,
+    "unit": "光の性質"
+  },
+  {
+    "question": "ルーペ（虫眼鏡）を使って物を見る際、物体はどの位置に置くべきか。",
+    "options": [
+      "焦点より外側",
+      "焦点より内側",
+      "焦点距離のちょうど2倍",
+      "レンズに密着させる",
+      "どこでもよい"
+    ],
+    "answerIndex": 1,
+    "explanation": "ルーペは、物体を焦点の内側に置くことで、大きく正立した虚像を見る道具です。",
+    "id": 20,
+    "unit": "光の性質"
+  },
+  {
+    "question": "音が鳴っている物体に共通して見られる現象は何ですか。",
+    "options": [
+      "物体が熱くなっている",
+      "物体が振動している",
+      "物体が光っている",
+      "物体の色が変化している",
+      "物体の重さが軽くなっている"
+    ],
+    "answerIndex": 1,
+    "explanation": "音を出している物体はすべて細かく「振動」しており、この物体を音源（発音体）と呼びます。",
+    "id": 21,
+    "unit": "音の性質"
+  },
+  {
+    "question": "音を伝えることができない場所（空間）はどこですか。",
+    "options": [
+      "空気中",
+      "水の中",
+      "金属の中",
+      "真空中",
+      "土の中"
+    ],
+    "answerIndex": 3,
+    "explanation": "音は物質の振動によって伝わるため、伝える物質（媒介物）が全く存在しない真空中では伝わりません。",
+    "id": 22,
+    "unit": "音の性質"
+  },
+  {
+    "question": "空気中を伝わる音の速さは、およそ秒速何mですか。",
+    "options": [
+      "約3.0m/s",
+      "約34m/s",
+      "約340m/s",
+      "約1500m/s",
+      "約30万km/s"
+    ],
+    "answerIndex": 2,
+    "explanation": "空気中を伝わる音の速さは、気温によりますが一般的に約340m/sとして計算されます。",
+    "id": 23,
+    "unit": "音の性質"
+  },
+  {
+    "question": "雷が光ってから4秒後に音が聞こえました。雷が発生した場所までの距離は何mですか。ただし音速を340m/sとします。",
+    "options": [
+      "85m",
+      "340m",
+      "680m",
+      "1360m",
+      "2720m"
+    ],
+    "answerIndex": 3,
+    "explanation": "「道のり = 速さ × 時間」の公式にあてはめ、340m/s × 4s = 1360mとなります。",
+    "id": 24,
+    "unit": "音の性質"
+  },
+  {
+    "question": "山に向かって叫んだら、2秒後に「やまびこ」が聞こえました。山までの距離は何mですか。ただし音速を340m/sとします。",
+    "options": [
+      "170m",
+      "340m",
+      "680m",
+      "1020m",
+      "1360m"
+    ],
+    "answerIndex": 1,
+    "explanation": "音は往復しているため、計算で出た距離（340×2=680m）を2で割る必要があります。",
+    "id": 25,
+    "unit": "音の性質"
+  },
+  {
+    "question": "音の大きさを決める、音源の振動の振れ幅のことを何といいますか。",
+    "options": [
+      "波長",
+      "周期",
+      "振動数",
+      "振幅",
+      "音速"
+    ],
+    "answerIndex": 3,
+    "explanation": "振動の幅を「振幅」といい、これが大きいほど大きな音になります。",
+    "id": 26,
+    "unit": "音の性質"
+  },
+  {
+    "question": "音の高さを決める、1秒間に振動する回数のことを何といいますか。",
+    "options": [
+      "振幅",
+      "周期",
+      "振動数",
+      "音圧",
+      "波形"
+    ],
+    "answerIndex": 2,
+    "explanation": "1秒間に振動する回数を「振動数」といい、回数が多いほど高い音になります。",
+    "id": 27,
+    "unit": "音の性質"
+  },
+  {
+    "question": "振動数を表す単位として適切なものはどれですか。",
+    "options": [
+      "N（ニュートン）",
+      "Hz（ヘルツ）",
+      "Pa（パスカル）",
+      "dB（デシベル）",
+      "m/s（メートル毎秒）"
+    ],
+    "answerIndex": 1,
+    "explanation": "振動数の単位はHz（ヘルツ）で表されます。",
+    "id": 28,
+    "unit": "音の性質"
+  },
+  {
+    "question": "モノコードの弦を弾くとき、より大きな音を出す方法はどれですか。",
+    "options": [
+      "弦を強く弾く",
+      "弦を弱く弾く",
+      "弦を短く張る",
+      "弦を細いものに変える",
+      "弦をきつく張る"
+    ],
+    "answerIndex": 0,
+    "explanation": "大きな音を出すには、振動の幅（振幅）を大きくする必要があるため、強く弾くのが正解です。",
+    "id": 29,
+    "unit": "音の性質"
+  },
+  {
+    "question": "モノコードで高い音を出すための条件として、間違っているものはどれですか。",
+    "options": [
+      "弦を短くする",
+      "弦を強く張る",
+      "弦を細いものにする",
+      "弦を強く弾く",
+      "こと（柱）の間隔を狭くする"
+    ],
+    "answerIndex": 3,
+    "explanation": "弾く強さは「音の大きさ」に関係しますが、「音の高さ」には関係しません。",
+    "id": 30,
+    "unit": "音の性質"
+  },
+  {
+    "question": "オシロスコープで音を観察したとき、波の上下の幅が大きくなるのはどのような場合ですか。",
+    "options": [
+      "音が高くなったとき",
+      "音が低くなったとき",
+      "音が大きくなったとき",
+      "音が小さくなったとき",
+      "音の速さが上がったとき"
+    ],
+    "answerIndex": 2,
+    "explanation": "波の上下の幅は振幅を表しているため、音が大きくなるとこの幅が大きくなります。",
+    "id": 31,
+    "unit": "音の性質"
+  },
+  {
+    "question": "オシロスコープの画面で、波の数が増えて横の間隔が狭くなるのはどのような音ですか。",
+    "options": [
+      "高い音",
+      "低い音",
+      "大きい音",
+      "小さい音",
+      "こもった音"
+    ],
+    "answerIndex": 0,
+    "explanation": "波の数が多いことは振動数が多いことを示しており、高い音であることを意味します。",
+    "id": 32,
+    "unit": "音の性質"
+  },
+  {
+    "question": "同じ強さで叩いたとき、最も高い音が出る音叉（おんさ）はどれですか。",
+    "options": [
+      "最も大きい音叉",
+      "最も重い音叉",
+      "最も小さい音叉",
+      "最も長い音叉",
+      "どれも同じ高さ"
+    ],
+    "answerIndex": 2,
+    "explanation": "一般に小さいものや短いものの方が、速く振動しやすいため高い音が出ます。",
+    "id": 33,
+    "unit": "音の性質"
+  },
+  {
+    "question": "水の中と空気中では、どちらの方が音の伝わる速さが速いですか。",
+    "options": [
+      "空気中の方が速い",
+      "水の中の方が速い",
+      "どちらも同じ速さ",
+      "温度が低ければ空気の方が速い",
+      "真空中が最も速い"
+    ],
+    "answerIndex": 1,
+    "explanation": "音は、空気中（約340m/s）よりも水中（約1500m/s）の方が速く伝わります。",
+    "id": 34,
+    "unit": "音の性質"
+  },
+  {
+    "question": "糸電話で声が伝わるのは、糸がどのような状態のときですか。",
+    "options": [
+      "糸が緩んでいるとき",
+      "糸が濡れているとき",
+      "糸がピンと張って振動しているとき",
+      "糸が非常に長いとき",
+      "糸が太いとき"
+    ],
+    "answerIndex": 2,
+    "explanation": "糸電話は糸の振動で音を伝えるため、糸がピンと張っていないと振動が伝わりません。",
+    "id": 35,
+    "unit": "音の性質"
+  },
+  {
+    "question": "10秒間に500回振動した音源の振動数は何Hzですか。",
+    "options": [
+      "5Hz",
+      "50Hz",
+      "500Hz",
+      "5000Hz",
+      "0.02Hz"
+    ],
+    "answerIndex": 1,
+    "explanation": "振動数は1秒あたりの回数なので、500回 ÷ 10秒 = 50Hzとなります。",
+    "id": 36,
+    "unit": "音の性質"
+  },
+  {
+    "question": "光の速さと音の速さを比べたとき、正しい記述はどれですか。",
+    "options": [
+      "音の方が圧倒的に速い",
+      "光の方が圧倒的に速い",
+      "どちらも同じ速さである",
+      "距離が遠いと音が先に届く",
+      "水中では音の方が速い"
+    ],
+    "answerIndex": 1,
+    "explanation": "光の速さは約30万km/sで、音の速さ（約340m/s）よりも圧倒的に速いです。",
+    "id": 37,
+    "unit": "音の性質"
+  },
+  {
+    "question": "2つの同じ高さの音叉を並べて片方を叩くと、もう片方も鳴り始める現象を何といいますか。",
+    "options": [
+      "反射",
+      "屈折",
+      "共鳴（共鳴振動）",
+      "干渉",
+      "回折"
+    ],
+    "answerIndex": 2,
+    "explanation": "同じ振動数の物体が、音の振動を受け取って共に震え出す現象を「共鳴」といいます。",
+    "id": 38,
+    "unit": "音の性質"
+  },
+  {
+    "question": "弦楽器の弦を弾いたときの「低い音」の特徴として正しいものはどれですか。",
+    "options": [
+      "振幅が大きい",
+      "振幅が小さい",
+      "振動数が多い",
+      "振動数が少ない",
+      "波長が短い"
+    ],
+    "answerIndex": 3,
+    "explanation": "低い音は、1秒あたりの振動回数である「振動数」が少ないという特徴があります。",
+    "id": 39,
+    "unit": "音の性質"
+  },
+  {
+    "question": "打ち上げ花火が見えてから音が聞こえるまでに時間がかかるのはなぜですか。",
+    "options": [
+      "音のエネルギーが弱いから",
+      "光が空気で屈折するから",
+      "音の速さが光の速さより遅いから",
+      "花火が空高くにあるから",
+      "脳の処理が遅いから"
+    ],
+    "answerIndex": 2,
+    "explanation": "光は一瞬で届きますが、音は1秒間に340mずつしか進まないため、距離があると遅れて聞こえます。",
+    "id": 40,
+    "unit": "音の性質"
+  },
+  {
+    "question": "「重さ」の単位として正しいものはどれですか。",
+    "options": [
+      "g (グラム)",
+      "kg (キログラム)",
+      "N (ニュートン)",
+      "Pa (パスカル)",
+      "m/s (メートル毎秒)"
+    ],
+    "answerIndex": 2,
+    "explanation": "理科では、物体にはたらく重力の大きさを「重さ」といい、単位にはN（ニュートン）を使います。",
+    "id": 41,
+    "unit": "力の性質"
+  },
+  {
+    "question": "地球上で質量100gの物体にはたらく重力の大きさは約いくらですか。",
+    "options": [
+      "0.1 N",
+      "1 N",
+      "10 N",
+      "100 N",
+      "1000 N"
+    ],
+    "answerIndex": 1,
+    "explanation": "地球上では、約100gの物体にはたらく重力の大きさを1Nとして計算します。",
+    "id": 42,
+    "unit": "力の性質"
+  },
+  {
+    "question": "ばねののびが、ばねを引く力の大きさに比例するという法則を何といいますか。",
+    "options": [
+      "慣性の法則",
+      "屈折の法則",
+      "オームの法則",
+      "フックの法則",
+      "反射の法則"
+    ],
+    "answerIndex": 3,
+    "explanation": "ばねののびと力の大きさが比例する関係は「フックの法則」と呼ばれます。",
+    "id": 43,
+    "unit": "力の性質"
+  },
+  {
+    "question": "月面上で物体の質量と重さをはかったとき、地球上とはかった場合と比較して正しい説明はどれですか。",
+    "options": [
+      "質量も重さも変わらない",
+      "質量は変わらないが、重さは約6分の1になる",
+      "質量は約6分の1になるが、重さは変わらない",
+      "質量も重さも約6分の1になる",
+      "質量は変わらないが、重さは約6倍になる"
+    ],
+    "answerIndex": 1,
+    "explanation": "質量は場所によって変わらない物体そのものの量ですが、重さは重力の大きさなので月の重力に従い約6分の1になります。",
+    "id": 44,
+    "unit": "力の性質"
+  },
+  {
+    "question": "物体が触れ合っている面で、物体の動きを妨げようとする向きにはたらく力を何といいますか。",
+    "options": [
+      "磁力",
+      "弾性力",
+      "重力",
+      "垂直抗力",
+      "摩擦力"
+    ],
+    "answerIndex": 4,
+    "explanation": "物体が動こうとする向きとは反対向きにはたらき、動きを邪魔する力を摩擦力といいます。",
+    "id": 45,
+    "unit": "力の性質"
+  },
+  {
+    "question": "1Nの力で引くと2cmのびるばねがあります。このばねを3Nの力で引いたときの「のび」は何cmですか。",
+    "options": [
+      "2 cm",
+      "3 cm",
+      "5 cm",
+      "6 cm",
+      "8 cm"
+    ],
+    "answerIndex": 3,
+    "explanation": "フックの法則により「のび」は力に比例するため、力が3倍になれば、のびも2cm×3＝6cmになります。",
+    "id": 46,
+    "unit": "力の性質"
+  },
+  {
+    "question": "圧力の単位「Pa（パスカル）」と同じ意味を表す単位はどれですか。",
+    "options": [
+      "N/cm²",
+      "N/m²",
+      "g/cm³",
+      "kg/m²",
+      "N・m"
+    ],
+    "answerIndex": 1,
+    "explanation": "圧力は1m²あたりの面を垂直に押す力のことなので、N/m²（ニュートン毎平方メートル）と同じです。",
+    "id": 47,
+    "unit": "力の性質"
+  },
+  {
+    "question": "100Nの力が2m²の面積にはたらいているとき、圧力は何Paですか。",
+    "options": [
+      "20 Pa",
+      "50 Pa",
+      "100 Pa",
+      "200 Pa",
+      "500 Pa"
+    ],
+    "answerIndex": 1,
+    "explanation": "圧力(Pa) ＝ 力(N) ÷ 面積(m²) で求めるため、100 ÷ 2 = 50Paとなります。",
+    "id": 48,
+    "unit": "力の性質"
+  },
+  {
+    "question": "スポンジの上に重いレンガを置くとき、スポンジが最も深くへこむのはどのようなときですか。",
+    "options": [
+      "レンガを最も面積の広い面で置く",
+      "レンガを最も面積の狭い面で置く",
+      "レンガを斜めに置く",
+      "どの面で置いてもへこみ方は同じ",
+      "レンガの下に板を敷いて置く"
+    ],
+    "answerIndex": 1,
+    "explanation": "力が同じ場合、接する面積が小さいほど圧力は大きくなり、スポンジは深くへこみます。",
+    "id": 49,
+    "unit": "力の性質"
+  },
+  {
+    "question": "変形した物体が、もとの形に戻ろうとして生じる力を何といいますか。",
+    "options": [
+      "磁力",
+      "電気の力",
+      "弾性力",
+      "重力",
+      "摩擦力"
+    ],
+    "answerIndex": 2,
+    "explanation": "ばねやゴムなどが、変形させられたときにもとの形に戻ろうとする力を弾性力といいます。",
+    "id": 50,
+    "unit": "力の性質"
+  },
+  {
+    "question": "机の上に置かれた物体が、机から垂直に押し返される力を何といいますか。",
+    "options": [
+      "重力",
+      "摩擦力",
+      "弾性力",
+      "垂直抗力",
+      "圧力"
+    ],
+    "answerIndex": 3,
+    "explanation": "面が物体を垂直に押し返す力を垂直抗力といいます。これは重力とつり合って物体を支えています。",
+    "id": 51,
+    "unit": "力の性質"
+  },
+  {
+    "question": "長さ10cmのばねに1Nの重りをつるすと、全体の長さが12cmになりました。2Nの重りをつるしたときの「全体の長さ」は何cmですか。",
+    "options": [
+      "12 cm",
+      "14 cm",
+      "15 cm",
+      "20 cm",
+      "24 cm"
+    ],
+    "answerIndex": 1,
+    "explanation": "1Nでのびが2cmなので、2Nでのびは4cmになります。全体の長さは10cm＋4cm＝14cmです。",
+    "id": 52,
+    "unit": "力の性質"
+  },
+  {
+    "question": "地球の中心に向かってはたらく、地球が物体を引く力を何といいますか。",
+    "options": [
+      "磁力",
+      "気圧",
+      "弾性力",
+      "摩擦力",
+      "重力"
+    ],
+    "answerIndex": 4,
+    "explanation": "地球がその中心に向かって物体を引く力を重力と呼びます。",
+    "id": 53,
+    "unit": "力の性質"
+  },
+  {
+    "question": "空気の重さによって生じる圧力を何といいますか。",
+    "options": [
+      "水圧",
+      "大気圧",
+      "垂直抗力",
+      "弾性力",
+      "重力"
+    ],
+    "answerIndex": 1,
+    "explanation": "私たちの周りにある空気の重さによる圧力を、大気圧（または気圧）といいます。",
+    "id": 54,
+    "unit": "力の性質"
+  },
+  {
+    "question": "海面付近での標準的な大気圧の値は約いくらですか。",
+    "options": [
+      "1 Pa",
+      "100 Pa",
+      "1013 Pa",
+      "1013 hPa",
+      "10130 hPa"
+    ],
+    "answerIndex": 3,
+    "explanation": "海面付近の大気圧は約1013hPa（ヘクトパスカル）です。1hPaは100Paを表します。",
+    "id": 55,
+    "unit": "力の性質"
+  },
+  {
+    "question": "水の中にある物体に、あらゆる向きからはたらく水の重さによる圧力を何といいますか。",
+    "options": [
+      "大気圧",
+      "浮力",
+      "水圧",
+      "重力",
+      "摩擦力"
+    ],
+    "answerIndex": 2,
+    "explanation": "水の中に沈んでいる物体にはたらく、水の重さによる圧力を水圧といいます。",
+    "id": 56,
+    "unit": "力の性質"
+  },
+  {
+    "question": "水圧の大きさについて、正しい説明はどれですか。",
+    "options": [
+      "水面に近いほど大きい",
+      "深くなるほど大きい",
+      "深さに関係なく一定である",
+      "上向きにははたらかない",
+      "物体の形には関係しない"
+    ],
+    "answerIndex": 1,
+    "explanation": "水圧は、その場所より上にある水の重さによって決まるため、深ければ深いほど大きくなります。",
+    "id": 57,
+    "unit": "力の性質"
+  },
+  {
+    "question": "質量500gの物体を机の上に置きました。この物体にはたらく重力の大きさは何Nですか。",
+    "options": [
+      "0.5 N",
+      "5 N",
+      "50 N",
+      "500 N",
+      "5000 N"
+    ],
+    "answerIndex": 1,
+    "explanation": "100gを1Nと考えるため、500gの物体にはたらく重力は5Nとなります。",
+    "id": 58,
+    "unit": "力の性質"
+  },
+  {
+    "question": "フックの法則の実験結果をグラフに表したとき、どのような形になりますか。",
+    "options": [
+      "反比例の曲線",
+      "一定の値を示す水平な直線",
+      "原点を通る直線",
+      "階段状の線",
+      "山型の曲線"
+    ],
+    "answerIndex": 2,
+    "explanation": "比例の関係にある2つの量は、グラフにすると必ず原点を通る直線になります。",
+    "id": 59,
+    "unit": "力の性質"
+  },
+  {
+    "question": "物体を上から押したとき、圧力を小さくする方法として正しいものはどれですか。",
+    "options": [
+      "より大きな力で押す",
+      "接する面積を大きくする",
+      "接する面積を小さくする",
+      "物体の質量を増やす",
+      "押す向きを斜めにする"
+    ],
+    "answerIndex": 1,
+    "explanation": "圧力 ＝ 力 ÷ 面積 なので、分母である「面積」を大きくすることで全体の数値（圧力）は小さくなります。",
+    "id": 60,
+    "unit": "力の性質"
+  }
+];
+
+    const QUESTION_COUNT = 10;
+    let currentQuestions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let isAnswered = false;
+
+    window.onload = () => {
+      const storageKey = 'quizHighScore_中学物理 5択クイズ';
+      const highScore = localStorage.getItem(storageKey) || 0;
+      document.getElementById('high-score-display').innerText = `過去の最高得点: ${highScore}点`;
+    };
+
+    function startQuiz() {
+      currentQuestions = [...allQuizData].sort(() => 0.5 - Math.random()).slice(0, QUESTION_COUNT);
+      currentQuestionIndex = 0;
+      score = 0;
+
+      document.getElementById('start-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('quiz-screen').classList.remove('hidden');
+
+      showQuestion();
+    }
+
+    function showQuestion() {
+      isAnswered = false;
+      document.getElementById('explanation-box').classList.add('hidden');
+
+      const q = currentQuestions[currentQuestionIndex];
+      document.getElementById('progress').innerText = `問題 ${currentQuestionIndex + 1} / ${currentQuestions.length} （${q.unit}）`;
+      document.getElementById('question-text').innerText = q.question;
+
+      const optionsContainer = document.getElementById('options-container');
+      optionsContainer.innerHTML = '';
+
+      q.options.forEach((option, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn';
+        btn.innerText = option;
+        btn.onclick = () => checkAnswer(index, btn);
+        optionsContainer.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(selectedIndex, selectedBtn) {
+      if (isAnswered) return;
+      isAnswered = true;
+
+      const q = currentQuestions[currentQuestionIndex];
+      const buttons = document.getElementById('options-container').querySelectorAll('button');
+
+      buttons.forEach((btn, index) => {
+        btn.disabled = true;
+        if (index === q.answerIndex) {
+          btn.classList.add('correct-btn');
+        } else if (index === selectedIndex) {
+          btn.classList.add('wrong-btn');
+        }
+      });
+
+      const title = document.getElementById('result-title');
+      if (selectedIndex === q.answerIndex) {
+        title.innerText = "⭕ 正解！";
+        title.style.color = "#4CAF50";
+        score++;
+      } else {
+        title.innerText = "❌ 不正解...";
+        title.style.color = "#f44336";
+      }
+
+      document.getElementById('explanation-text').innerText = q.explanation;
+      document.getElementById('explanation-box').classList.remove('hidden');
+    }
+
+    function nextQuestion() {
+      currentQuestionIndex++;
+      if (currentQuestionIndex < currentQuestions.length) {
+        showQuestion();
+      } else {
+        finishQuiz();
+      }
+    }
+
+    function finishQuiz() {
+      document.getElementById('quiz-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.remove('hidden');
+
+      document.getElementById('final-score').innerText = `${currentQuestions.length}問中 ${score}問正解！`;
+
+      const storageKey = 'quizHighScore_中学物理 5択クイズ';
+      const currentHighScore = parseInt(localStorage.getItem(storageKey) || 0);
+      const msgElement = document.getElementById('new-high-score-msg');
+
+      if (score > currentHighScore) {
+        localStorage.setItem(storageKey, score);
+        msgElement.innerText = "🎉 最高得点を更新しました！";
+        msgElement.classList.remove('hidden');
+      } else {
+        msgElement.classList.add('hidden');
+      }
+    }
+
+    function resetQuiz() {
+      const storageKey = 'quizHighScore_中学物理 5択クイズ';
+      const highScore = localStorage.getItem(storageKey) || 0;
+      document.getElementById('high-score-display').innerText = `過去の最高得点: ${highScore}点`;
+
+      document.getElementById('result-screen').classList.add('hidden');
+      document.getElementById('start-screen').classList.remove('hidden');
+    }
+  </script>
+</body>
+</html>
